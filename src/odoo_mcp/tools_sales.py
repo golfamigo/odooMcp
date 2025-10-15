@@ -4,20 +4,24 @@ Implementación de herramientas (tools) para ventas en MCP-Odoo
 
 from typing import Dict, List, Any, Optional
 from datetime import datetime, timedelta
-from mcp.server.fastmcp import FastMCP, Context
+from mcp.server.fastmcp import FastMCP
 
 from .models import (
     SalesOrderFilter,
     SalesOrderCreate,
     SalesPerformanceInput
 )
+from .odoo_client import get_odoo_client
 
 def register_sales_tools(mcp: FastMCP) -> None:
     """Registra herramientas relacionadas con ventas"""
-    
+
+    # Helper function to get Odoo client
+    def _get_odoo():
+        return get_odoo_client()
+
     @mcp.tool(description="Busca pedidos de venta con filtros avanzados")
     def search_sales_orders(
-        ctx: Context,
         filters: SalesOrderFilter
     ) -> Dict[str, Any]:
         """
@@ -29,7 +33,7 @@ def register_sales_tools(mcp: FastMCP) -> None:
         Returns:
             Diccionario con resultados de la búsqueda
         """
-        odoo = ctx.request_context.lifespan_context.odoo
+        odoo = _get_odoo()
         
         try:
             # Construir dominio de búsqueda
@@ -88,7 +92,6 @@ def register_sales_tools(mcp: FastMCP) -> None:
     
     @mcp.tool(description="Crear un nuevo pedido de venta")
     def create_sales_order(
-        ctx: Context,
         order: SalesOrderCreate
     ) -> Dict[str, Any]:
         """
@@ -100,7 +103,7 @@ def register_sales_tools(mcp: FastMCP) -> None:
         Returns:
             Respuesta con el resultado de la operación
         """
-        odoo = ctx.request_context.lifespan_context.odoo
+        odoo = _get_odoo()
         
         try:
             # Preparar valores para el pedido
@@ -149,7 +152,6 @@ def register_sales_tools(mcp: FastMCP) -> None:
     
     @mcp.tool(description="Analiza el rendimiento de ventas en un período")
     def analyze_sales_performance(
-        ctx: Context,
         params: SalesPerformanceInput
     ) -> Dict[str, Any]:
         """
@@ -161,7 +163,7 @@ def register_sales_tools(mcp: FastMCP) -> None:
         Returns:
             Diccionario con resultados del análisis
         """
-        odoo = ctx.request_context.lifespan_context.odoo
+        odoo = _get_odoo()
         
         try:
             # Validar fechas

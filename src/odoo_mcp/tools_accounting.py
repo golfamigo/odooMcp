@@ -4,20 +4,24 @@ Implementación de herramientas (tools) para contabilidad en MCP-Odoo
 
 from typing import Dict, List, Any, Optional
 from datetime import datetime, timedelta
-from mcp.server.fastmcp import FastMCP, Context
+from mcp.server.fastmcp import FastMCP
 
 from .models import (
     JournalEntryFilter,
     JournalEntryCreate,
     FinancialRatioInput
 )
+from .odoo_client import get_odoo_client
 
 def register_accounting_tools(mcp: FastMCP) -> None:
     """Registra herramientas relacionadas con contabilidad"""
-    
+
+    # Helper function to get Odoo client
+    def _get_odoo():
+        return get_odoo_client()
+
     @mcp.tool(description="Busca asientos contables con filtros")
     def search_journal_entries(
-        ctx: Context,
         filters: JournalEntryFilter
     ) -> Dict[str, Any]:
         """
@@ -29,7 +33,7 @@ def register_accounting_tools(mcp: FastMCP) -> None:
         Returns:
             Diccionario con resultados de la búsqueda
         """
-        odoo = ctx.request_context.lifespan_context.odoo
+        odoo = _get_odoo()
         
         try:
             # Construir dominio de búsqueda
@@ -100,7 +104,7 @@ def register_accounting_tools(mcp: FastMCP) -> None:
     
     @mcp.tool(description="Crea un nuevo asiento contable")
     def create_journal_entry(
-        ctx: Context,
+        
         entry: JournalEntryCreate
     ) -> Dict[str, Any]:
         """
@@ -112,7 +116,7 @@ def register_accounting_tools(mcp: FastMCP) -> None:
         Returns:
             Respuesta con el resultado de la operación
         """
-        odoo = ctx.request_context.lifespan_context.odoo
+        odoo = _get_odoo()
         
         try:
             # Verificar que el debe y el haber cuadran
@@ -177,7 +181,7 @@ def register_accounting_tools(mcp: FastMCP) -> None:
     
     @mcp.tool(description="Calcula ratios financieros clave")
     def analyze_financial_ratios(
-        ctx: Context,
+        
         params: FinancialRatioInput
     ) -> Dict[str, Any]:
         """
@@ -189,7 +193,7 @@ def register_accounting_tools(mcp: FastMCP) -> None:
         Returns:
             Diccionario con los ratios calculados
         """
-        odoo = ctx.request_context.lifespan_context.odoo
+        odoo = _get_odoo()
         
         try:
             # Validar fechas

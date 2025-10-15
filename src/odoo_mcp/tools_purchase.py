@@ -4,20 +4,24 @@ Implementación de herramientas (tools) para compras en MCP-Odoo
 
 from typing import Dict, List, Any, Optional
 from datetime import datetime, timedelta
-from mcp.server.fastmcp import FastMCP, Context
+from mcp.server.fastmcp import FastMCP
 
 from .models import (
     PurchaseOrderFilter,
     PurchaseOrderCreate,
     SupplierPerformanceInput
 )
+from .odoo_client import get_odoo_client
 
 def register_purchase_tools(mcp: FastMCP) -> None:
     """Registra herramientas relacionadas con compras"""
-    
+
+    # Helper function to get Odoo client
+    def _get_odoo():
+        return get_odoo_client()
+
     @mcp.tool(description="Busca órdenes de compra con filtros avanzados")
     def search_purchase_orders(
-        ctx: Context,
         filters: PurchaseOrderFilter
     ) -> Dict[str, Any]:
         """
@@ -29,7 +33,7 @@ def register_purchase_tools(mcp: FastMCP) -> None:
         Returns:
             Diccionario con resultados de la búsqueda
         """
-        odoo = ctx.request_context.lifespan_context.odoo
+        odoo = _get_odoo()
         
         try:
             # Construir dominio de búsqueda
@@ -89,7 +93,7 @@ def register_purchase_tools(mcp: FastMCP) -> None:
     
     @mcp.tool(description="Crear una nueva orden de compra")
     def create_purchase_order(
-        ctx: Context,
+        
         order: PurchaseOrderCreate
     ) -> Dict[str, Any]:
         """
@@ -101,7 +105,7 @@ def register_purchase_tools(mcp: FastMCP) -> None:
         Returns:
             Respuesta con el resultado de la operación
         """
-        odoo = ctx.request_context.lifespan_context.odoo
+        odoo = _get_odoo()
         
         try:
             # Preparar valores para la orden
@@ -150,7 +154,7 @@ def register_purchase_tools(mcp: FastMCP) -> None:
     
     @mcp.tool(description="Analiza el rendimiento de los proveedores")
     def analyze_supplier_performance(
-        ctx: Context,
+        
         params: SupplierPerformanceInput
     ) -> Dict[str, Any]:
         """
@@ -162,7 +166,7 @@ def register_purchase_tools(mcp: FastMCP) -> None:
         Returns:
             Diccionario con resultados del análisis
         """
-        odoo = ctx.request_context.lifespan_context.odoo
+        odoo = _get_odoo()
         
         try:
             # Validar fechas

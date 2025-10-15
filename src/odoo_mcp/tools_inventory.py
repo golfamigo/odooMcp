@@ -4,20 +4,25 @@ Implementación de herramientas (tools) para inventario en MCP-Odoo
 
 from typing import Dict, List, Any, Optional
 from datetime import datetime, timedelta
-from mcp.server.fastmcp import FastMCP, Context
+from mcp.server.fastmcp import FastMCP
 
 from .models import (
     ProductAvailabilityInput,
     InventoryAdjustmentCreate,
     InventoryTurnoverInput
 )
+from .odoo_client import get_odoo_client
 
 def register_inventory_tools(mcp: FastMCP) -> None:
     """Registra herramientas relacionadas con inventario"""
-    
+
+    # Helper function to get Odoo client
+    def _get_odoo():
+        return get_odoo_client()
+
     @mcp.tool(description="Verifica la disponibilidad de stock para uno o más productos")
     def check_product_availability(
-        ctx: Context,
+        
         params: ProductAvailabilityInput
     ) -> Dict[str, Any]:
         """
@@ -29,7 +34,7 @@ def register_inventory_tools(mcp: FastMCP) -> None:
         Returns:
             Diccionario con información de disponibilidad
         """
-        odoo = ctx.request_context.lifespan_context.odoo
+        odoo = _get_odoo()
         
         try:
             # Verificar que los productos existen
@@ -111,7 +116,7 @@ def register_inventory_tools(mcp: FastMCP) -> None:
     
     @mcp.tool(description="Crea un ajuste de inventario para corregir el stock")
     def create_inventory_adjustment(
-        ctx: Context,
+        
         adjustment: InventoryAdjustmentCreate
     ) -> Dict[str, Any]:
         """
@@ -123,7 +128,7 @@ def register_inventory_tools(mcp: FastMCP) -> None:
         Returns:
             Respuesta con el resultado de la operación
         """
-        odoo = ctx.request_context.lifespan_context.odoo
+        odoo = _get_odoo()
         
         try:
             # Verificar la versión de Odoo para determinar el modelo correcto
@@ -229,7 +234,7 @@ def register_inventory_tools(mcp: FastMCP) -> None:
     
     @mcp.tool(description="Calcula y analiza la rotación de inventario")
     def analyze_inventory_turnover(
-        ctx: Context,
+        
         params: InventoryTurnoverInput
     ) -> Dict[str, Any]:
         """
@@ -241,7 +246,7 @@ def register_inventory_tools(mcp: FastMCP) -> None:
         Returns:
             Diccionario con resultados del análisis
         """
-        odoo = ctx.request_context.lifespan_context.odoo
+        odoo = _get_odoo()
         
         try:
             # Validar fechas
