@@ -213,10 +213,10 @@ class SearchHolidaysResponse(BaseModel):
 
 @mcp.tool(description="Execute a custom method on an Odoo model")
 def execute_method(
-    model: str,
-    method: str,
-    args: Optional[List[Any]] = None,
-    kwargs: Optional[Dict[str, Any]] = None,
+    model: str = Field(description="The Odoo model name (e.g., 'res.partner')"),
+    method: str = Field(description="Method name to execute (e.g., 'search_read')"),
+    args: List[Any] = Field(default=[], description="Positional arguments as a list"),
+    kwargs: Dict[str, Any] = Field(default={}, description="Keyword arguments as a dictionary"),
 ) -> Dict[str, Any]:
     """
     Execute a custom method on an Odoo model
@@ -235,8 +235,9 @@ def execute_method(
     """
     odoo = _get_odoo()
     try:
-        args = args or []
-        kwargs = kwargs or {}
+        # args and kwargs already have defaults, no need to check
+        # args = args or []
+        # kwargs = kwargs or {}
 
         # Special handling for search methods like search, search_count, search_read
         search_methods = ["search", "search_count", "search_read"]
