@@ -217,7 +217,20 @@ def execute_method(
     method: str = Field(description="Method name to execute (e.g., 'search_read')"),
     args: List[Any] = Field(
         default_factory=list,
-        description="Positional arguments as a list"
+        description="Positional arguments as a list",
+        json_schema_extra={
+            "items": {
+                "anyOf": [
+                    {"type": "string"},
+                    {"type": "number"},
+                    {"type": "integer"},
+                    {"type": "boolean"},
+                    {"type": "null"},
+                    {"type": "array"},
+                    {"type": "object"}
+                ]
+            }
+        }
     ),
     kwargs: Dict[str, Any] = Field(
         default_factory=dict,
