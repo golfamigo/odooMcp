@@ -217,13 +217,11 @@ def execute_method(
     method: str = Field(description="Method name to execute (e.g., 'search_read')"),
     args: List[Any] = Field(
         default_factory=list,
-        description="Positional arguments as a list",
-        json_schema_extra={"type": "array", "items": {}, "default": []}
+        description="Positional arguments as a list"
     ),
     kwargs: Dict[str, Any] = Field(
         default_factory=dict,
-        description="Keyword arguments as a dictionary",
-        json_schema_extra={"type": "object", "additionalProperties": {}, "default": {}}
+        description="Keyword arguments as a dictionary"
     ),
 ) -> Dict[str, Any]:
     """
