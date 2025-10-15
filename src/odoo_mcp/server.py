@@ -215,7 +215,7 @@ class SearchHolidaysResponse(BaseModel):
 def execute_method(
     model: str,
     method: str,
-    args: List = None,
+    args: Optional[List[Any]] = None,
     kwargs: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """
@@ -224,8 +224,8 @@ def execute_method(
     Parameters:
         model: The model name (e.g., 'res.partner')
         method: Method name to execute
-        args: Positional arguments
-        kwargs: Keyword arguments
+        args: Positional arguments (list of any type)
+        kwargs: Keyword arguments (dictionary)
 
     Returns:
         Dictionary containing:
