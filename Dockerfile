@@ -17,10 +17,16 @@ COPY requirements.txt ./
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
-COPY . .
+# Copy pyproject.toml and README.md (needed for pip install -e .)
+COPY pyproject.toml README.md ./
 
-# Install the package
+# Copy source code
+COPY src ./src
+
+# Copy other necessary files
+COPY run_server.py ./
+
+# Install the package in editable mode
 RUN pip install -e .
 
 # Create logs directory
