@@ -15,11 +15,7 @@ TRANSPORT_MODE = os.getenv("MCP_TRANSPORT", "stdio")  # stdio or sse
 
 if TRANSPORT_MODE == "stdio":
     from mcp.server.stdio import stdio_server
-elif TRANSPORT_MODE == "sse":
-    from mcp.server.sse import SseServerTransport
-    from starlette.applications import Starlette
-    from starlette.routing import Route
-else:
+elif TRANSPORT_MODE != "sse":
     raise ValueError(f"Invalid MCP_TRANSPORT: {TRANSPORT_MODE}. Must be 'stdio' or 'sse'")
 
 from odoo_mcp.server import mcp
@@ -78,42 +74,11 @@ async def run_sse_server(logger):
     port = int(os.getenv("PORT", "8000"))
     host = os.getenv("HOST", "0.0.0.0")
 
-    # Create SSE transport
-    sse = SseServerTransport("/messages")
-
-    async def handle_sse(request):
-        async with sse.connect_sse(
-            request.scope,
-            request.receive,
-            request._send
-        ) as streams:
-            await mcp._mcp_server.run(
-                streams[0],
-                streams[1],
-                mcp._mcp_server.create_initialization_options()
-            )
-
-    async def handle_messages(request):
-        await sse.handle_post_message(request.scope, request.receive, request._send)
-
-    # Create Starlette app
-    app = Starlette(
-        debug=True,
-        routes=[
-            Route("/sse", endpoint=handle_sse),
-            Route("/messages", endpoint=handle_messages, methods=["POST"]),
-        ]
-    )
-
     logger.info(f"SSE server starting on {host}:{port}")
     logger.info(f"SSE endpoint: http://{host}:{port}/sse")
-    logger.info(f"Messages endpoint: http://{host}:{port}/messages")
 
-    # Run with uvicorn
-    import uvicorn
-    config = uvicorn.Config(app, host=host, port=port, log_level="info")
-    server = uvicorn.Server(config)
-    await server.serve()
+    # Use FastMCP's built-in SSE server
+    await mcp.run_async(transport="sse", host=host, port=port, log_level="info")
 
 
 def main() -> int:
