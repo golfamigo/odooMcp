@@ -8,8 +8,12 @@ RUN apt-get update && \
     gcc \
     procps \
     curl \
+    git \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
+# Upgrade pip
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 
 # Copy requirements first for better caching
 COPY requirements.txt ./
@@ -40,10 +44,6 @@ ENV ODOO_TIMEOUT=60
 ENV ODOO_VERIFY_SSL=false
 ENV PORT=8000
 ENV HOST=0.0.0.0
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:${PORT}/health || exit 1
 
 # Expose port
 EXPOSE 8000
