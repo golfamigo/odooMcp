@@ -4,7 +4,7 @@ Implementación de herramientas (tools) para compras en MCP-Odoo
 
 from typing import Dict, List, Any, Optional
 from datetime import datetime, timedelta
-from mcp.server.fastmcp import FastMCP
+from fastmcp import FastMCP
 
 from .models import (
     PurchaseOrderFilter,
