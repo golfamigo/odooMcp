@@ -98,6 +98,22 @@ def main() -> int:
         logger.info("=== ODOO MCP UNIFIED SERVER STARTING ===")
         logger.info(f"Python version: {sys.version}")
         logger.info(f"Transport mode: {TRANSPORT_MODE}")
+
+        # Log package versions
+        try:
+            import fastmcp
+            logger.info(f"FastMCP version: {fastmcp.__version__ if hasattr(fastmcp, '__version__') else 'unknown'}")
+            logger.info(f"FastMCP location: {fastmcp.__file__}")
+            logger.info(f"FastMCP available methods: {[m for m in dir(mcp) if m.startswith('run')]}")
+        except Exception as e:
+            logger.warning(f"Could not get FastMCP version: {e}")
+
+        try:
+            import mcp as mcp_sdk
+            logger.info(f"MCP SDK version: {mcp_sdk.__version__ if hasattr(mcp_sdk, '__version__') else 'unknown'}")
+        except Exception as e:
+            logger.warning(f"Could not get MCP SDK version: {e}")
+
         logger.info("Environment variables:")
         for key, value in os.environ.items():
             if key.startswith("ODOO_") or key.startswith("MCP_"):
