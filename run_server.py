@@ -77,13 +77,10 @@ async def run_sse_server(logger):
     logger.info(f"SSE server starting on {host}:{port}")
     logger.info(f"SSE endpoint: http://{host}:{port}/sse")
 
-    # Use FastMCP's run_async method which automatically calls run_http_async
-    # Based on FastMCP source code (works in all versions >= 2.3.0):
-    # async def run_async(self, transport: Transport | None = None, **transport_kwargs: Any)
-    #   if transport in {"http", "sse", "streamable-http"}:
-    #       await self.run_http_async(transport=transport, **transport_kwargs)
-    await mcp.run_async(
-        transport="sse",
+    # Use FastMCP's run_sse_async method
+    # Based on actual FastMCP 2.12.4 available methods from Zeabur logs:
+    # ['run', 'run_sse_async', 'run_stdio_async', 'run_streamable_http_async']
+    await mcp.run_sse_async(
         host=host,
         port=port,
         log_level="info"
