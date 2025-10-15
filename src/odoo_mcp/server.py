@@ -215,8 +215,16 @@ class SearchHolidaysResponse(BaseModel):
 def execute_method(
     model: str = Field(description="The Odoo model name (e.g., 'res.partner')"),
     method: str = Field(description="Method name to execute (e.g., 'search_read')"),
-    args: List[Any] = Field(default=[], description="Positional arguments as a list"),
-    kwargs: Dict[str, Any] = Field(default={}, description="Keyword arguments as a dictionary"),
+    args: List[Any] = Field(
+        default_factory=list,
+        description="Positional arguments as a list",
+        json_schema_extra={"type": "array", "items": {}, "default": []}
+    ),
+    kwargs: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Keyword arguments as a dictionary",
+        json_schema_extra={"type": "object", "additionalProperties": {}, "default": {}}
+    ),
 ) -> Dict[str, Any]:
     """
     Execute a custom method on an Odoo model
