@@ -66,7 +66,7 @@ async def run_stdio_server(logger):
         )
 
 
-async def run_sse_server(logger):
+def run_sse_server(logger):
     """Run server in SSE mode (for Zeabur/Web deployment)"""
     logger.info("Starting Odoo MCP server with SSE transport...")
 
@@ -78,7 +78,8 @@ async def run_sse_server(logger):
     logger.info(f"SSE endpoint: http://{host}:{port}/sse")
 
     # Use FastMCP's built-in SSE server
-    await mcp.run_async(transport="sse", host=host, port=port, log_level="info")
+    # mcp.run() is synchronous but handles async internally
+    mcp.run(transport="sse", host=host, port=port, log_level="info")
 
 
 def main() -> int:
@@ -103,7 +104,7 @@ def main() -> int:
         if TRANSPORT_MODE == "stdio":
             asyncio.run(run_stdio_server(logger))
         elif TRANSPORT_MODE == "sse":
-            asyncio.run(run_sse_server(logger))
+            run_sse_server(logger)  # This is synchronous, no asyncio.run needed
 
         logger.info("MCP server stopped normally")
         return 0
