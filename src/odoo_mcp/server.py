@@ -7,7 +7,7 @@ import json
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Union
 
-from mcp.server.fastmcp import Context, FastMCP
+from fastmcp import FastMCP  # Use standalone fastmcp package, not mcp.server.fastmcp
 from pydantic import BaseModel, Field
 
 from .odoo_client import OdooClient, get_odoo_client
