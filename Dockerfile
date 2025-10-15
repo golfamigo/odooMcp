@@ -21,11 +21,12 @@ COPY requirements.txt ./
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy all project files at once (more reliable on Zeabur)
+# Copy all project files
 COPY . .
 
-# Install the package in editable mode
-RUN pip install -e .
+# Add src to PYTHONPATH instead of installing package
+# This is more reliable for Docker/Zeabur deployment
+ENV PYTHONPATH=/app/src:$PYTHONPATH
 
 # Create logs directory
 RUN mkdir -p /app/logs && chmod 777 /app/logs
