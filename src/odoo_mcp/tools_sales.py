@@ -22,123 +22,148 @@ def register_sales_tools(mcp: FastMCP) -> None:
 
     @mcp.tool(description="Busca pedidos de venta con filtros avanzados")
     def search_sales_orders(
-        filters: SalesOrderFilter
+        partner_id: Optional[int] = None,
+        date_from: Optional[str] = None,
+        date_to: Optional[str] = None,
+        state: Optional[str] = None,
+        limit: int = 20,
+        offset: int = 0,
+        order: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Busca pedidos de venta según los filtros especificados
-        
+
         Args:
-            filters: Filtros para la búsqueda de pedidos
-            
+            partner_id: Filtrar por cliente ID (opcional)
+            date_from: Fecha inicial en formato YYYY-MM-DD (opcional)
+            date_to: Fecha final en formato YYYY-MM-DD (opcional)
+            state: Estado del pedido, ej: 'sale', 'draft', 'done' (opcional)
+            limit: Límite de resultados (default: 20)
+            offset: Offset para paginación (default: 0)
+            order: Criterio de ordenación, ej: 'date_order DESC' (opcional)
+
         Returns:
             Diccionario con resultados de la búsqueda
         """
         odoo = _get_odoo()
-        
+
         try:
             # Construir dominio de búsqueda
             domain = []
-            
-            if filters.partner_id:
-                domain.append(("partner_id", "=", filters.partner_id))
-                
-            if filters.date_from:
+
+            if partner_id:
+                domain.append(("partner_id", "=", partner_id))
+
+            if date_from:
                 try:
-                    datetime.strptime(filters.date_from, "%Y-%m-%d")
-                    domain.append(("date_order", ">=", filters.date_from))
+                    datetime.strptime(date_from, "%Y-%m-%d")
+                    domain.append(("date_order", ">=", date_from))
                 except ValueError:
-                    return {"success": False, "error": f"Formato de fecha inválido: {filters.date_from}. Use YYYY-MM-DD."}
-                
-            if filters.date_to:
+                    return {"success": False, "error": f"Formato de fecha inválido: {date_from}. Use YYYY-MM-DD."}
+
+            if date_to:
                 try:
-                    datetime.strptime(filters.date_to, "%Y-%m-%d")
-                    domain.append(("date_order", "<=", filters.date_to))
+                    datetime.strptime(date_to, "%Y-%m-%d")
+                    domain.append(("date_order", "<=", date_to))
                 except ValueError:
-                    return {"success": False, "error": f"Formato de fecha inválido: {filters.date_to}. Use YYYY-MM-DD."}
-                
-            if filters.state:
-                domain.append(("state", "=", filters.state))
-            
+                    return {"success": False, "error": f"Formato de fecha inválido: {date_to}. Use YYYY-MM-DD."}
+
+            if state:
+                domain.append(("state", "=", state))
+
             # Campos a recuperar
             fields = [
-                "name", "partner_id", "date_order", "amount_total", 
+                "name", "partner_id", "date_order", "amount_total",
                 "state", "invoice_status", "user_id", "order_line"
             ]
-            
+
             # Ejecutar búsqueda
             orders = odoo.search_read(
-                "sale.order", 
-                domain, 
-                fields=fields, 
-                limit=filters.limit,
-                offset=filters.offset,
-                order=filters.order
+                "sale.order",
+                domain,
+                fields=fields,
+                limit=limit,
+                offset=offset,
+                order=order
             )
-            
+
             # Obtener el conteo total sin límite para paginación
             total_count = odoo.execute_method("sale.order", "search_count", domain)
-            
+
             return {
-                "success": True, 
+                "success": True,
                 "result": {
                     "count": len(orders),
                     "total_count": total_count,
                     "orders": orders
                 }
             }
-            
+
         except Exception as e:
             return {"success": False, "error": str(e)}
     
     @mcp.tool(description="Crear un nuevo pedido de venta")
     def create_sales_order(
-        order: SalesOrderCreate
+        partner_id: int,
+        order_lines: List[Dict[str, Any]],
+        date_order: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Crea un nuevo pedido de venta
-        
+
         Args:
-            order: Datos del pedido a crear
-            
+            partner_id: ID del cliente
+            order_lines: Lista de líneas del pedido. Cada línea debe tener:
+                - product_id (int): ID del producto
+                - product_uom_qty (float): Cantidad
+                - price_unit (float, opcional): Precio unitario
+            date_order: Fecha del pedido en formato YYYY-MM-DD (opcional)
+
         Returns:
             Respuesta con el resultado de la operación
         """
         odoo = _get_odoo()
-        
+
         try:
             # Preparar valores para el pedido
             order_vals = {
-                "partner_id": order.partner_id,
+                "partner_id": partner_id,
                 "order_line": []
             }
-            
-            if order.date_order:
+
+            if date_order:
                 try:
-                    datetime.strptime(order.date_order, "%Y-%m-%d")
-                    order_vals["date_order"] = order.date_order
+                    datetime.strptime(date_order, "%Y-%m-%d")
+                    order_vals["date_order"] = date_order
                 except ValueError:
-                    return {"success": False, "error": f"Formato de fecha inválido: {order.date_order}. Use YYYY-MM-DD."}
-            
+                    return {"success": False, "error": f"Formato de fecha inválido: {date_order}. Use YYYY-MM-DD."}
+
             # Preparar líneas de pedido
-            for line in order.order_lines:
+            for line in order_lines:
+                if not isinstance(line, dict):
+                    return {"success": False, "error": "Cada línea debe ser un diccionario"}
+
+                if "product_id" not in line or "product_uom_qty" not in line:
+                    return {"success": False, "error": "Cada línea debe contener product_id y product_uom_qty"}
+
                 line_vals = [
                     0, 0, {
-                        "product_id": line.product_id,
-                        "product_uom_qty": line.product_uom_qty
+                        "product_id": line["product_id"],
+                        "product_uom_qty": line["product_uom_qty"]
                     }
                 ]
-                
-                if line.price_unit is not None:
-                    line_vals[2]["price_unit"] = line.price_unit
-                    
+
+                if "price_unit" in line and line["price_unit"] is not None:
+                    line_vals[2]["price_unit"] = line["price_unit"]
+
                 order_vals["order_line"].append(line_vals)
-            
+
             # Crear pedido
             order_id = odoo.execute_method("sale.order", "create", order_vals)
-            
+
             # Obtener información del pedido creado
             order_info = odoo.execute_method("sale.order", "read", [order_id], ["name"])[0]
-            
+
             return {
                 "success": True,
                 "result": {
@@ -146,37 +171,41 @@ def register_sales_tools(mcp: FastMCP) -> None:
                     "order_name": order_info["name"]
                 }
             }
-            
+
         except Exception as e:
             return {"success": False, "error": str(e)}
     
     @mcp.tool(description="Analiza el rendimiento de ventas en un período")
     def analyze_sales_performance(
-        params: SalesPerformanceInput
+        date_from: str,
+        date_to: str,
+        group_by: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Analiza el rendimiento de ventas en un período específico
-        
+
         Args:
-            params: Parámetros para el análisis
-            
+            date_from: Fecha inicial en formato YYYY-MM-DD
+            date_to: Fecha final en formato YYYY-MM-DD
+            group_by: Agrupar resultados por 'product', 'customer', o 'salesperson' (opcional)
+
         Returns:
             Diccionario con resultados del análisis
         """
         odoo = _get_odoo()
-        
+
         try:
             # Validar fechas
             try:
-                datetime.strptime(params.date_from, "%Y-%m-%d")
-                datetime.strptime(params.date_to, "%Y-%m-%d")
+                datetime.strptime(date_from, "%Y-%m-%d")
+                datetime.strptime(date_to, "%Y-%m-%d")
             except ValueError:
                 return {"success": False, "error": "Formato de fecha inválido. Use YYYY-MM-DD."}
-            
+
             # Construir dominio para pedidos confirmados
             domain = [
-                ("date_order", ">=", params.date_from),
-                ("date_order", "<=", params.date_to),
+                ("date_order", ">=", date_from),
+                ("date_order", "<=", date_to),
                 ("state", "in", ["sale", "done"])
             ]
             
@@ -186,13 +215,13 @@ def register_sales_tools(mcp: FastMCP) -> None:
                 domain,
                 fields=["name", "partner_id", "date_order", "amount_total", "user_id"]
             )
-            
+
             # Calcular período anterior para comparación
-            date_from = datetime.strptime(params.date_from, "%Y-%m-%d")
-            date_to = datetime.strptime(params.date_to, "%Y-%m-%d")
-            delta = date_to - date_from
-            
-            prev_date_to = date_from - timedelta(days=1)
+            date_from_dt = datetime.strptime(date_from, "%Y-%m-%d")
+            date_to_dt = datetime.strptime(date_to, "%Y-%m-%d")
+            delta = date_to_dt - date_from_dt
+
+            prev_date_to = date_from_dt - timedelta(days=1)
             prev_date_from = prev_date_to - delta
             
             prev_domain = [
@@ -218,8 +247,8 @@ def register_sales_tools(mcp: FastMCP) -> None:
             
             # Agrupar según el parámetro group_by
             grouped_data = {}
-            if params.group_by:
-                if params.group_by == "product":
+            if group_by:
+                if group_by == "product":
                     # Obtener líneas de pedido para analizar productos
                     order_ids = [order["id"] for order in sales_data]
                     if order_ids:
@@ -256,7 +285,7 @@ def register_sales_tools(mcp: FastMCP) -> None:
                             {"id": k, **v} for k, v in top_products[:10]
                         ]
                 
-                elif params.group_by == "customer":
+                elif group_by == "customer":
                     # Agrupar por cliente
                     customer_data = {}
                     for order in sales_data:
@@ -284,7 +313,7 @@ def register_sales_tools(mcp: FastMCP) -> None:
                         {"id": k, **v} for k, v in top_customers[:10]
                     ]
                 
-                elif params.group_by == "salesperson":
+                elif group_by == "salesperson":
                     # Agrupar por vendedor
                     salesperson_data = {}
                     for order in sales_data:
@@ -315,8 +344,8 @@ def register_sales_tools(mcp: FastMCP) -> None:
             # Preparar resultado
             result = {
                 "period": {
-                    "from": params.date_from,
-                    "to": params.date_to
+                    "from": date_from,
+                    "to": date_to
                 },
                 "summary": {
                     "order_count": len(sales_data),

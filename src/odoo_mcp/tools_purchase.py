@@ -22,58 +22,70 @@ def register_purchase_tools(mcp: FastMCP) -> None:
 
     @mcp.tool(description="Busca órdenes de compra con filtros avanzados")
     def search_purchase_orders(
-        filters: PurchaseOrderFilter
+        partner_id: Optional[int] = None,
+        date_from: Optional[str] = None,
+        date_to: Optional[str] = None,
+        state: Optional[str] = None,
+        limit: int = 20,
+        offset: int = 0,
+        order: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Busca órdenes de compra según los filtros especificados
-        
+
         Args:
-            filters: Filtros para la búsqueda de órdenes
-            
+            partner_id: Filtrar por proveedor ID (opcional)
+            date_from: Fecha inicial en formato YYYY-MM-DD (opcional)
+            date_to: Fecha final en formato YYYY-MM-DD (opcional)
+            state: Estado de la orden, ej: 'purchase', 'draft', 'done' (opcional)
+            limit: Límite de resultados (default: 20)
+            offset: Offset para paginación (default: 0)
+            order: Criterio de ordenación, ej: 'date_order DESC' (opcional)
+
         Returns:
             Diccionario con resultados de la búsqueda
         """
         odoo = _get_odoo()
-        
+
         try:
             # Construir dominio de búsqueda
             domain = []
-            
-            if filters.partner_id:
-                domain.append(("partner_id", "=", filters.partner_id))
-                
-            if filters.date_from:
+
+            if partner_id:
+                domain.append(("partner_id", "=", partner_id))
+
+            if date_from:
                 try:
-                    datetime.strptime(filters.date_from, "%Y-%m-%d")
-                    domain.append(("date_order", ">=", filters.date_from))
+                    datetime.strptime(date_from, "%Y-%m-%d")
+                    domain.append(("date_order", ">=", date_from))
                 except ValueError:
-                    return {"success": False, "error": f"Formato de fecha inválido: {filters.date_from}. Use YYYY-MM-DD."}
-                
-            if filters.date_to:
+                    return {"success": False, "error": f"Formato de fecha inválido: {date_from}. Use YYYY-MM-DD."}
+
+            if date_to:
                 try:
-                    datetime.strptime(filters.date_to, "%Y-%m-%d")
-                    domain.append(("date_order", "<=", filters.date_to))
+                    datetime.strptime(date_to, "%Y-%m-%d")
+                    domain.append(("date_order", "<=", date_to))
                 except ValueError:
-                    return {"success": False, "error": f"Formato de fecha inválido: {filters.date_to}. Use YYYY-MM-DD."}
-                
-            if filters.state:
-                domain.append(("state", "=", filters.state))
-            
+                    return {"success": False, "error": f"Formato de fecha inválido: {date_to}. Use YYYY-MM-DD."}
+
+            if state:
+                domain.append(("state", "=", state))
+
             # Campos a recuperar
             fields = [
-                "name", "partner_id", "date_order", "amount_total", 
+                "name", "partner_id", "date_order", "amount_total",
                 "state", "invoice_status", "user_id", "order_line",
                 "date_planned", "date_approve"
             ]
-            
+
             # Ejecutar búsqueda
             orders = odoo.search_read(
-                "purchase.order", 
-                domain, 
-                fields=fields, 
-                limit=filters.limit,
-                offset=filters.offset,
-                order=filters.order
+                "purchase.order",
+                domain,
+                fields=fields,
+                limit=limit,
+                offset=offset,
+                order=order
             )
             
             # Obtener el conteo total sin límite para paginación
@@ -93,54 +105,66 @@ def register_purchase_tools(mcp: FastMCP) -> None:
     
     @mcp.tool(description="Crear una nueva orden de compra")
     def create_purchase_order(
-        
-        order: PurchaseOrderCreate
+        partner_id: int,
+        order_lines: List[Dict[str, Any]],
+        date_order: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Crea una nueva orden de compra
-        
+
         Args:
-            order: Datos de la orden a crear
-            
+            partner_id: ID del proveedor
+            order_lines: Lista de líneas de la orden. Cada línea debe tener:
+                - product_id (int): ID del producto
+                - product_qty (float): Cantidad
+                - price_unit (float, opcional): Precio unitario
+            date_order: Fecha de la orden en formato YYYY-MM-DD (opcional)
+
         Returns:
             Respuesta con el resultado de la operación
         """
         odoo = _get_odoo()
-        
+
         try:
             # Preparar valores para la orden
             order_vals = {
-                "partner_id": order.partner_id,
+                "partner_id": partner_id,
                 "order_line": []
             }
-            
-            if order.date_order:
+
+            if date_order:
                 try:
-                    datetime.strptime(order.date_order, "%Y-%m-%d")
-                    order_vals["date_order"] = order.date_order
+                    datetime.strptime(date_order, "%Y-%m-%d")
+                    order_vals["date_order"] = date_order
                 except ValueError:
-                    return {"success": False, "error": f"Formato de fecha inválido: {order.date_order}. Use YYYY-MM-DD."}
-            
+                    return {"success": False, "error": f"Formato de fecha inválido: {date_order}. Use YYYY-MM-DD."}
+
             # Preparar líneas de orden
-            for line in order.order_lines:
+            for line in order_lines:
+                if not isinstance(line, dict):
+                    return {"success": False, "error": "Cada línea debe ser un diccionario"}
+
+                if "product_id" not in line or "product_qty" not in line:
+                    return {"success": False, "error": "Cada línea debe contener product_id y product_qty"}
+
                 line_vals = [
                     0, 0, {
-                        "product_id": line.product_id,
-                        "product_qty": line.product_qty
+                        "product_id": line["product_id"],
+                        "product_qty": line["product_qty"]
                     }
                 ]
-                
-                if line.price_unit is not None:
-                    line_vals[2]["price_unit"] = line.price_unit
-                    
+
+                if "price_unit" in line and line["price_unit"] is not None:
+                    line_vals[2]["price_unit"] = line["price_unit"]
+
                 order_vals["order_line"].append(line_vals)
-            
+
             # Crear orden
             order_id = odoo.execute_method("purchase.order", "create", order_vals)
-            
+
             # Obtener información de la orden creada
             order_info = odoo.execute_method("purchase.order", "read", [order_id], ["name"])[0]
-            
+
             return {
                 "success": True,
                 "result": {
@@ -148,44 +172,47 @@ def register_purchase_tools(mcp: FastMCP) -> None:
                     "order_name": order_info["name"]
                 }
             }
-            
+
         except Exception as e:
             return {"success": False, "error": str(e)}
     
     @mcp.tool(description="Analiza el rendimiento de los proveedores")
     def analyze_supplier_performance(
-        
-        params: SupplierPerformanceInput
+        date_from: str,
+        date_to: str,
+        supplier_ids: Optional[List[int]] = None
     ) -> Dict[str, Any]:
         """
         Analiza el rendimiento de los proveedores en un período específico
-        
+
         Args:
-            params: Parámetros para el análisis
-            
+            date_from: Fecha inicial en formato YYYY-MM-DD
+            date_to: Fecha final en formato YYYY-MM-DD
+            supplier_ids: Lista de IDs de proveedores a analizar (opcional)
+
         Returns:
             Diccionario con resultados del análisis
         """
         odoo = _get_odoo()
-        
+
         try:
             # Validar fechas
             try:
-                datetime.strptime(params.date_from, "%Y-%m-%d")
-                datetime.strptime(params.date_to, "%Y-%m-%d")
+                datetime.strptime(date_from, "%Y-%m-%d")
+                datetime.strptime(date_to, "%Y-%m-%d")
             except ValueError:
                 return {"success": False, "error": "Formato de fecha inválido. Use YYYY-MM-DD."}
-            
+
             # Construir dominio para órdenes confirmadas
             domain = [
-                ("date_order", ">=", params.date_from),
-                ("date_order", "<=", params.date_to),
+                ("date_order", ">=", date_from),
+                ("date_order", "<=", date_to),
                 ("state", "in", ["purchase", "done"])
             ]
-            
+
             # Filtrar por proveedores específicos si se proporcionan
-            if params.supplier_ids:
-                domain.append(("partner_id", "in", params.supplier_ids))
+            if supplier_ids:
+                domain.append(("partner_id", "in", supplier_ids))
             
             # Obtener datos de compras
             purchase_data = odoo.search_read(
@@ -268,8 +295,8 @@ def register_purchase_tools(mcp: FastMCP) -> None:
             # Preparar resultado
             result = {
                 "period": {
-                    "from": params.date_from,
-                    "to": params.date_to
+                    "from": date_from,
+                    "to": date_to
                 },
                 "summary": {
                     "supplier_count": len(supplier_data),
