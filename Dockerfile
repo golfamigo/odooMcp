@@ -21,15 +21,8 @@ COPY requirements.txt ./
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy all necessary files for installation
-# Using wildcard pattern to ensure all files are copied
-COPY pyproject.toml ./
-COPY README.md ./
-COPY CHANGELOG.md ./
-COPY run_server.py ./
-
-# Copy source code
-COPY src ./src
+# Copy all project files at once (more reliable on Zeabur)
+COPY . .
 
 # Install the package in editable mode
 RUN pip install -e .
