@@ -19,7 +19,7 @@ from .extensions import register_all_extensions
 mcp = FastMCP(
     name="Odoo MCP Unified",
     instructions="""
-    This server provides comprehensive Odoo ERP integration with 17+ tools.
+    This server provides comprehensive Odoo ERP integration with 15+ tools.
 
     Core Tools:
     - execute_method: Execute any Odoo method (most powerful)
@@ -29,14 +29,10 @@ mcp = FastMCP(
     Business Tools:
     - Sales: search_sales_orders, create_sales_order, analyze_sales_performance
     - Purchase: search_purchase_orders, create_purchase_order, analyze_supplier_performance
-    - Inventory: get_stock_levels, predict_stock_needs
-    - Accounting: get_financial_summary, analyze_receivables
+    - Inventory: check_product_availability, create_inventory_adjustment, analyze_inventory_turnover
+    - Accounting: search_journal_entries, create_journal_entry, analyze_financial_ratios
 
-    Resources:
-    - odoo://models: List all models
-    - odoo://model/{name}: Get model info
-    - odoo://record/{model}/{id}: Get specific record
-    - odoo://search/{model}/{domain}: Search records
+    Note: MCP Resources disabled for N8N to reduce token usage. Use execute_method for all queries.
     """
 )
 
@@ -48,94 +44,29 @@ def _get_odoo() -> OdooClient:
 
 
 # ----- MCP Resources -----
+# NOTE: Resources are disabled for N8N integration to reduce token usage
+# N8N MCP Client would preload all resource data, causing 2M+ token overflow
+# All functionality is still available through MCP Tools (execute_method, etc.)
 
+# @mcp.resource("odoo://models")
+# def get_models() -> str:
+#     """Disabled to reduce token usage in N8N"""
+#     pass
 
-@mcp.resource(
-    "odoo://models", description="List all available models in the Odoo system"
-)
-def get_models() -> str:
-    """Lists all available models in the Odoo system"""
-    odoo_client = get_odoo_client()
-    models = odoo_client.get_models()
-    return json.dumps(models, indent=2)
+# @mcp.resource("odoo://model/{model_name}")
+# def get_model_info(model_name: str) -> str:
+#     """Disabled to reduce token usage in N8N"""
+#     pass
 
+# @mcp.resource("odoo://record/{model_name}/{record_id}")
+# def get_record(model_name: str, record_id: str) -> str:
+#     """Disabled to reduce token usage in N8N"""
+#     pass
 
-@mcp.resource(
-    "odoo://model/{model_name}",
-    description="Get detailed information about a specific model including fields",
-)
-def get_model_info(model_name: str) -> str:
-    """
-    Get information about a specific model
-
-    Parameters:
-        model_name: Name of the Odoo model (e.g., 'res.partner')
-    """
-    odoo_client = get_odoo_client()
-    try:
-        # Get model info
-        model_info = odoo_client.get_model_info(model_name)
-
-        # Get field definitions
-        fields = odoo_client.get_model_fields(model_name)
-        model_info["fields"] = fields
-
-        return json.dumps(model_info, indent=2)
-    except Exception as e:
-        return json.dumps({"error": str(e)}, indent=2)
-
-
-@mcp.resource(
-    "odoo://record/{model_name}/{record_id}",
-    description="Get detailed information of a specific record by ID",
-)
-def get_record(model_name: str, record_id: str) -> str:
-    """
-    Get a specific record by ID
-
-    Parameters:
-        model_name: Name of the Odoo model (e.g., 'res.partner')
-        record_id: ID of the record
-    """
-    odoo_client = get_odoo_client()
-    try:
-        record_id_int = int(record_id)
-        record = odoo_client.read_records(model_name, [record_id_int])
-        if not record:
-            return json.dumps(
-                {"error": f"Record not found: {model_name} ID {record_id}"}, indent=2
-            )
-        return json.dumps(record[0], indent=2)
-    except Exception as e:
-        return json.dumps({"error": str(e)}, indent=2)
-
-
-@mcp.resource(
-    "odoo://search/{model_name}/{domain}",
-    description="Search for records matching the domain",
-)
-def search_records_resource(model_name: str, domain: str) -> str:
-    """
-    Search for records that match a domain
-
-    Parameters:
-        model_name: Name of the Odoo model (e.g., 'res.partner')
-        domain: Search domain in JSON format (e.g., '[["name", "ilike", "test"]]')
-    """
-    odoo_client = get_odoo_client()
-    try:
-        # Parse domain from JSON string
-        domain_list = json.loads(domain)
-
-        # Set a reasonable default limit
-        limit = 10
-
-        # Perform search_read for efficiency
-        results = odoo_client.search_read(model_name, domain_list, limit=limit)
-
-        return json.dumps(results, indent=2)
-    except Exception as e:
-        return json.dumps({"error": str(e)}, indent=2)
+# @mcp.resource("odoo://search/{model_name}/{domain}")
+# def search_records_resource(model_name: str, domain: str) -> str:
+#     """Disabled to reduce token usage in N8N"""
+#     pass
 
 
 # ----- Pydantic models for type safety -----
