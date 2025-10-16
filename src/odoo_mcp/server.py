@@ -142,13 +142,13 @@ class SearchHolidaysResponse(BaseModel):
 # ----- MCP Tools -----
 
 
-@mcp.tool(description="Execute a custom method on an Odoo model using keyword arguments")
+@mcp.tool(description="Execute a custom method on an Odoo model. IMPORTANT: Always set 'limit' and 'fields' to avoid large responses!")
 def execute_method(
     model: str = Field(description="The Odoo model name (e.g., 'res.partner')"),
     method: str = Field(description="Method name to execute (e.g., 'search_read')"),
     kwargs: Dict[str, Any] = Field(
         default_factory=dict,
-        description="Keyword arguments for the method (e.g., {'domain': [], 'fields': ['name'], 'limit': 10})"
+        description="Keyword arguments. For search_read: MUST include 'limit' (max 100) and 'fields' (only necessary fields)"
     ),
 ) -> Dict[str, Any]:
     """
@@ -169,23 +169,11 @@ def execute_method(
         search_read: kwargs={'domain': [], 'fields': ['name', 'email'], 'limit': 10}
         search: kwargs={'domain': [['name', 'ilike', 'test']], 'limit': 5}
         create: kwargs={'name': 'New Record', 'email': 'test@example.com'}
+
+    WARNING: Not setting 'limit' or 'fields' can cause extremely large responses (2M+ tokens)!
     """
     odoo = _get_odoo()
     try:
-        # Apply safe defaults for search methods to prevent token overflow
-        # N8N AI Agent often doesn't set limit/fields, causing 2M+ token responses
-        if method in ['search_read', 'search']:
-            # Set default limit if not specified
-            if 'limit' not in kwargs:
-                kwargs['limit'] = 100  # Default: max 100 records
-
-            # For search_read, ensure reasonable field limit
-            if method == 'search_read':
-                # If fields is empty list or not set, limit to essential fields
-                if not kwargs.get('fields'):
-                    # Default essential fields for most models
-                    kwargs['fields'] = ['id', 'name', 'display_name', 'create_date', 'write_date']
-
         # Execute method with kwargs only (no positional args)
         result = odoo.execute_method(model, method, **kwargs)
         return {"success": True, "result": result}
