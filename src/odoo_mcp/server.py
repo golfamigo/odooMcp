@@ -172,6 +172,20 @@ def execute_method(
     """
     odoo = _get_odoo()
     try:
+        # Apply safe defaults for search methods to prevent token overflow
+        # N8N AI Agent often doesn't set limit/fields, causing 2M+ token responses
+        if method in ['search_read', 'search']:
+            # Set default limit if not specified
+            if 'limit' not in kwargs:
+                kwargs['limit'] = 100  # Default: max 100 records
+
+            # For search_read, ensure reasonable field limit
+            if method == 'search_read':
+                # If fields is empty list or not set, limit to essential fields
+                if not kwargs.get('fields'):
+                    # Default essential fields for most models
+                    kwargs['fields'] = ['id', 'name', 'display_name', 'create_date', 'write_date']
+
         # Execute method with kwargs only (no positional args)
         result = odoo.execute_method(model, method, **kwargs)
         return {"success": True, "result": result}
