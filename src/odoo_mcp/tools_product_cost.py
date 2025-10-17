@@ -10,8 +10,14 @@ from .odoo_client import get_odoo_client
 def register_product_cost_tools(mcp: FastMCP) -> None:
     """註冊產品成本分析相關工具"""
 
+    # Cache Odoo connection to avoid reconnecting on every tool call
+    _odoo_client_cache = None
+
     def _get_odoo():
-        return get_odoo_client()
+        nonlocal _odoo_client_cache
+        if _odoo_client_cache is None:
+            _odoo_client_cache = get_odoo_client()
+        return _odoo_client_cache
 
     @mcp.tool(description="分析產品的成本結構、毛利率，並支援排序和篩選")
     def analyze_product_costs(
