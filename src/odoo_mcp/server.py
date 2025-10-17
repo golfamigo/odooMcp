@@ -19,7 +19,7 @@ from .extensions import register_all_extensions
 mcp = FastMCP(
     name="Odoo MCP Unified",
     instructions="""
-    This server provides comprehensive Odoo ERP integration with 15+ tools.
+    This server provides comprehensive Odoo ERP integration with 18+ tools.
 
     Core Tools:
     - execute_method: Execute any Odoo method (most powerful)
@@ -31,6 +31,12 @@ mcp = FastMCP(
     - Purchase: search_purchase_orders, create_purchase_order, analyze_supplier_performance
     - Inventory: check_product_availability, create_inventory_adjustment, analyze_inventory_turnover
     - Accounting: search_journal_entries, create_journal_entry, analyze_financial_ratios
+    - Product Cost Analysis: analyze_product_costs, get_product_cost_detail, compare_product_costs
+
+    Product Cost Tools are specialized for import trading business:
+    - Analyze product profitability (profit margin, landed cost, base cost, fees)
+    - Compare multiple products
+    - Get detailed cost breakdown (RMB base cost, exchange rate, service fee, shipping, SI fee)
 
     Note: MCP Resources disabled for N8N to reduce token usage. Use execute_method for all queries.
     """
