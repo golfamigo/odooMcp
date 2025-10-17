@@ -94,7 +94,7 @@ def register_product_cost_tools(mcp: FastMCP) -> None:
                     "x_margin",
                     "x_margin_percent"
                 ],
-                limit=limit * 2  # 查詢更多，過濾後再取 limit
+                limit=min(limit, 50)  # 限制最大 50，避免 timeout
             )
 
             if not products:
